@@ -1,99 +1,184 @@
 const APPWRITE_ENDPOINT = "https://appwrite.chjk.xyz/v1";
 const APPWRITE_PROJECT_ID = "6968a0ae003339fc702b";
 
-const client = new Appwrite.Client()
-  .setEndpoint(APPWRITE_ENDPOINT)
-  .setProject(APPWRITE_PROJECT_ID);
+let account;
+let appwriteReady = false;
 
-const account = new Appwrite.Account(client);
-const { ID } = Appwrite;
-
-const loginForm = document.getElementById("loginForm");
-const registerForm = document.getElementById("registerForm");
-const msg = document.getElementById("msg");
-const tabLogin = document.getElementById("tabLogin");
-const tabRegister = document.getElementById("tabRegister");
-
-const redirectToHomework = () => {
-  window.location.href = "js/homework.html";
-};
-
-const setMessage = (text, type = "info") => {
-  if (!msg) return;
-  msg.textContent = text;
-  msg.dataset.type = type;
-};
-
-const showLoginTab = () => {
-  loginForm.hidden = false;
-  registerForm.hidden = true;
-  loginForm.classList.add("visible");
-  registerForm.classList.remove("visible");
-  tabLogin.classList.add("active");
-  tabRegister.classList.remove("active");
-  setMessage("");
-};
-
-const showRegisterTab = () => {
-  loginForm.hidden = true;
-  registerForm.hidden = false;
-  registerForm.classList.add("visible");
-  loginForm.classList.remove("visible");
-  tabRegister.classList.add("active");
-  tabLogin.classList.remove("active");
-  setMessage("");
-};
-
-const checkExistingSession = async () => {
-  try {
-    await account.get();
-    redirectToHomework();
-  } catch (error) {
-    // no active session; stay on login
-  }
-};
-
-if (tabLogin && tabRegister) {
-  tabLogin.addEventListener("click", showLoginTab);
-  tabRegister.addEventListener("click", showRegisterTab);
+// Warte bis Appwrite geladen ist
+function waitForAppwrite() {
+  return new Promise((resolve) => {
+    let checks = 0;
+    const interval = setInterval(() => {
+      checks++;
+      if (window.Appwrite) {
+        clearInterval(interval);
+        appwriteReady = true;
+        resolve(true);
+      } else if (checks > 50) { // 5 Sekunden timeout
+        clearInterval(interval);
+        console.warn("Appwrite CDN konnte nicht geladen werden");
+        resolve(false);
+      }
+    }, 100);
+  });
 }
 
-if (loginForm) {
+async function initAppwrite() {
+  if (!window.Appwrite) {
+    return false;
+  }
+
+  try {
+    const client = new Appwrite.Client()
+      .setEndpoint(APPWRITE_ENDPOINT)
+      .setProject(APPWRITE_PROJECT_ID);
+
+    account = new Appwrite.Account(client);
+    return true;
+  } catch (err) {
+    console.error("Appwrite init error:", err);
+    return false;
+  }
+}
+
+async function startApp() {
+  // Warte auf Appwrite oder nutze Timeout
+  const isReady = await waitForAppwrite();
+  
+  if (!isReady) {
+    document.getElementById("msg").textContent = "Fehler: Backend nicht verfügbar. Später erneut versuchen.";
+    document.getElementById("msg").dataset.type = "error";
+    return;
+  }
+
+  if (!await initAppwrite()) {
+    document.getElementById("msg").textContent = "Fehler: Appwrite konnte nicht initialisiert werden.";
+    document.getElementById("msg").dataset.type = "error";
+    return;
+  }
+
+  initializeUI();
+}
+
+function initializeUI() {
+  const loginForm = document.getElementById("loginForm");
+  const registerForm = document.getElementById("registerForm");
+  const tabLogin = document.getElementById("tabLogin");
+  const tabRegister = document.getElementById("tabRegister");
+  const msgEl = document.getElementById("msg");
+
+  // Tab switching
+  tabLogin.addEventListener("click", (e) => {
+    e.preventDefault();
+    loginForm.hidden = false;
+    registerForm.hidden = true;
+    tabLogin.classList.add("active");
+    tabRegister.classList.remove("active");
+    msgEl.textContent = "";
+  });
+
+  tabRegister.addEventListener("click", (e) => {
+    e.preventDefault();
+    loginForm.hidden = true;
+    registerForm.hidden = false;
+    tabRegister.classList.add("active");
+    tabLogin.classList.remove("active");
+    msgEl.textContent = "";
+  });
+
+  // Check existing session
+  checkSession();
+
+  // Login submit
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = document.getElementById("email").value;
+    const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
-    setMessage("Anmeldung laeuft...");
+
+    if (!email || !password) {
+      msgEl.textContent = "Bitte Email und Passwort eingeben.";
+      msgEl.dataset.type = "error";
+      return;
+    }
+
+    msgEl.textContent = "Anmeldung laeuft...";
+    msgEl.dataset.type = "info";
 
     try {
       await account.createEmailSession(email, password);
-      setMessage("Login erfolgreich.", "success");
-      redirectToHomework();
+      msgEl.textContent = "Login erfolgreich!";
+      msgEl.dataset.type = "success";
+      setTimeout(() => {
+        window.location.href = "js/homework.html";
+      }, 800);
     } catch (err) {
-      const reason = err?.message || "Login fehlgeschlagen.";
-      setMessage(reason, "error");
+      msgEl.textContent = err.message || "Login fehlgeschlagen";
+      msgEl.dataset.type = "error";
+      console.error("Login error:", err);
     }
   });
-}
 
-if (registerForm) {
+  // Register submit
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = document.getElementById("regEmail").value;
+    const email = document.getElementById("regEmail").value.trim();
     const password = document.getElementById("regPassword").value;
-    setMessage("Account wird erstellt...");
+
+    if (!email || !password) {
+      msgEl.textContent = "Bitte Email und Passwort eingeben.";
+      msgEl.dataset.type = "error";
+      return;
+    }
+
+    if (password.length < 8) {
+      msgEl.textContent = "Passwort muss mindestens 8 Zeichen lang sein.";
+      msgEl.dataset.type = "error";
+      return;
+    }
+
+    msgEl.textContent = "Account wird erstellt...";
+    msgEl.dataset.type = "info";
 
     try {
-      await account.create(ID.unique(), email, password);
-      await account.createEmailSession(email, password);
-      setMessage("Account erstellt und eingeloggt.", "success");
-      redirectToHomework();
+      await account.create("unique()", email, password, email.split("@")[0]);
+      msgEl.textContent = "Account erstellt! Logge ein...";
+      msgEl.dataset.type = "success";
+      
+      setTimeout(async () => {
+        try {
+          await account.createEmailSession(email, password);
+          msgEl.textContent = "Eingeloggt!";
+          msgEl.dataset.type = "success";
+          setTimeout(() => {
+            window.location.href = "js/homework.html";
+          }, 800);
+        } catch (err) {
+          msgEl.textContent = err.message || "Anmeldung fehlgeschlagen";
+          msgEl.dataset.type = "error";
+          console.error("Session error:", err);
+        }
+      }, 300);
     } catch (err) {
-      const reason = err?.message || "Registrierung fehlgeschlagen.";
-      setMessage(reason, "error");
+      msgEl.textContent = err.message || "Registrierung fehlgeschlagen";
+      msgEl.dataset.type = "error";
+      console.error("Register error:", err);
     }
   });
 }
 
-showLoginTab();
-checkExistingSession();
+async function checkSession() {
+  if (!account) return;
+  try {
+    await account.get();
+    window.location.href = "js/homework.html";
+  } catch (err) {
+    // No session, stay on login
+  }
+}
+
+// Start wenn DOM ready ist
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startApp);
+} else {
+  startApp();
+}
