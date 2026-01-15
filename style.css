@@ -190,6 +190,163 @@ button.secondary:hover {
   color: var(--muted);
 }
 
+/* Homework Styles */
+.homework-card {
+  max-width: 800px;
+  width: 100%;
+}
+
+.actions-row {
+  display: flex;
+  gap: 12px;
+}
+
+.actions-row button {
+  flex: 1;
+}
+
+.task-form {
+  background: var(--panel-strong);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.task-form h3 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--accent);
+}
+
+.task-form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.task-form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(125, 226, 255, 0.25);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.form-actions button {
+  flex: 1;
+}
+
+.task-list {
+  display: grid;
+  gap: 12px;
+}
+
+.task-item {
+  background: var(--panel-strong);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  transition: all 0.2s ease;
+}
+
+.task-item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 20px rgba(125, 226, 255, 0.15);
+}
+
+.task-item.completed {
+  opacity: 0.6;
+}
+
+.task-item.completed .task-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.task-checkbox input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  accent-color: var(--accent-strong);
+}
+
+.task-content {
+  flex: 1;
+  display: grid;
+  gap: 6px;
+}
+
+.task-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.task-desc {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.task-due {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.task-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.icon-btn.delete:hover {
+  border-color: var(--error);
+}
+
+.loading,
+.hint-text,
+.error {
+  text-align: center;
+  color: var(--muted);
+  padding: 32px;
+}
+
+.error {
+  color: var(--error);
+}
+
 @media (max-width: 640px) {
   .card {
     padding: 24px;
@@ -197,5 +354,18 @@ button.secondary:hover {
 
   .auth-header .title {
     font-size: 22px;
+  }
+
+  .actions-row {
+    flex-direction: column;
+  }
+
+  .task-item {
+    flex-wrap: wrap;
+  }
+
+  .task-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }

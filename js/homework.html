@@ -8,19 +8,42 @@
 </head>
 <body>
 	<main class="page">
-		<section class="card auth-card">
+		<section class="card homework-card">
 			<header class="auth-header">
 				<p class="eyebrow">HomeworkHub</p>
-				<h1 class="title">Hausaufgaben Uebersicht</h1>
-				<p class="subtitle">Eingeloggt als <span id="userEmail">...</span>.</p>
+				<h1 class="title">Meine Hausaufgaben</h1>
+				<p class="subtitle">Eingeloggt als <span id="userEmail">...</span></p>
 			</header>
 
-			<div class="actions">
+			<div class="actions-row">
+				<button id="addTaskBtn" class="primary">+ Neue Aufgabe</button>
 				<button id="logout" class="secondary">Logout</button>
 			</div>
 
-			<div class="hint">
-				<p>Hier koennen Aufgaben, To-Dos oder Notizen fuer den Schulalltag stehen.</p>
+			<!-- Formular zum Hinzufügen/Bearbeiten -->
+			<form id="taskForm" class="task-form" hidden>
+				<h3 id="formTitle">Neue Aufgabe</h3>
+				<label class="field">
+					<span>Fach / Titel</span>
+					<input id="taskTitle" type="text" placeholder="z.B. Mathe Hausaufgaben" required />
+				</label>
+				<label class="field">
+					<span>Beschreibung</span>
+					<textarea id="taskDesc" placeholder="Was ist zu tun?" rows="3"></textarea>
+				</label>
+				<label class="field">
+					<span>Fälligkeitsdatum</span>
+					<input id="taskDue" type="date" />
+				</label>
+				<div class="form-actions">
+					<button type="submit" class="primary">Speichern</button>
+					<button type="button" id="cancelBtn" class="secondary">Abbrechen</button>
+				</div>
+			</form>
+
+			<!-- Liste der Aufgaben -->
+			<div id="taskList" class="task-list">
+				<p class="loading">Lade Aufgaben...</p>
 			</div>
 		</section>
 	</main>
@@ -28,29 +51,211 @@
 	<script>
 		const APPWRITE_ENDPOINT = "https://appwrite.chjk.xyz/v1";
 		const APPWRITE_PROJECT_ID = "6968a0ae003339fc702b";
+		const DATABASE_ID = "homework-db";
+		const COLLECTION_ID = "tasks";
 
 		const client = new Appwrite.Client()
 			.setEndpoint(APPWRITE_ENDPOINT)
 			.setProject(APPWRITE_PROJECT_ID);
 
 		const account = new Appwrite.Account(client);
+		const databases = new Appwrite.Databases(client);
 
+		let currentUser = null;
+		let editingTaskId = null;
+
+		// DOM Elemente
 		const logoutBtn = document.getElementById("logout");
 		const userEmailEl = document.getElementById("userEmail");
+		const addTaskBtn = document.getElementById("addTaskBtn");
+		const taskForm = document.getElementById("taskForm");
+		const formTitle = document.getElementById("formTitle");
+		const cancelBtn = document.getElementById("cancelBtn");
+		const taskList = document.getElementById("taskList");
 
 		const redirectToLogin = () => {
 			window.location.replace("../index.html");
 		};
 
+		// Benutzer laden
 		const loadUser = async () => {
 			try {
-				const user = await account.get();
-				userEmailEl.textContent = user.email || user.name || "Unbekannt";
+				currentUser = await account.get();
+				userEmailEl.textContent = currentUser.email || currentUser.name || "Unbekannt";
+				loadTasks();
 			} catch (error) {
 				redirectToLogin();
 			}
 		};
 
+		// Aufgaben laden
+		const loadTasks = async () => {
+			try {
+				const response = await databases.listDocuments(
+					DATABASE_ID,
+					COLLECTION_ID,
+					[
+						Appwrite.Query.equal('userId', currentUser.$id),
+						Appwrite.Query.orderDesc('$createdAt')
+					]
+				);
+				
+				renderTasks(response.documents);
+			} catch (error) {
+				console.error("Fehler beim Laden der Aufgaben:", error);
+				taskList.innerHTML = '<p class="error">Fehler beim Laden der Aufgaben. Stelle sicher, dass die Datenbank konfiguriert ist.</p>';
+			}
+		};
+
+		// Aufgaben rendern
+		const renderTasks = (tasks) => {
+			if (tasks.length === 0) {
+				taskList.innerHTML = '<p class="hint-text">Noch keine Aufgaben. Klicke auf "Neue Aufgabe" um zu starten!</p>';
+				return;
+			}
+
+			taskList.innerHTML = tasks.map(task => `
+				<div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.$id}">
+					<div class="task-checkbox">
+						<input type="checkbox" 
+							id="check-${task.$id}" 
+							${task.completed ? 'checked' : ''} 
+							onchange="toggleTask('${task.$id}', this.checked)"
+						/>
+					</div>
+					<div class="task-content">
+						<h4 class="task-title">${escapeHtml(task.title)}</h4>
+						${task.description ? `<p class="task-desc">${escapeHtml(task.description)}</p>` : ''}
+						${task.dueDate ? `<span class="task-due">Fällig: ${formatDate(task.dueDate)}</span>` : ''}
+					</div>
+					<div class="task-actions">
+						<button class="icon-btn" onclick="editTask('${task.$id}')" title="Bearbeiten">✏️</button>
+						<button class="icon-btn delete" onclick="deleteTask('${task.$id}')" title="Löschen">🗑️</button>
+					</div>
+				</div>
+			`).join('');
+		};
+
+		// Escape HTML
+		const escapeHtml = (text) => {
+			const div = document.createElement('div');
+			div.textContent = text;
+			return div.innerHTML;
+		};
+
+		// Datum formatieren
+		const formatDate = (dateString) => {
+			const date = new Date(dateString);
+			return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+		};
+
+		// Aufgabe abhaken/abhaken rückgängig
+		window.toggleTask = async (taskId, completed) => {
+			try {
+				await databases.updateDocument(DATABASE_ID, COLLECTION_ID, taskId, {
+					completed: completed
+				});
+				loadTasks();
+			} catch (error) {
+				console.error("Fehler beim Aktualisieren:", error);
+				alert("Fehler beim Aktualisieren der Aufgabe");
+			}
+		};
+
+		// Aufgabe bearbeiten
+		window.editTask = async (taskId) => {
+			try {
+				const task = await databases.getDocument(DATABASE_ID, COLLECTION_ID, taskId);
+				editingTaskId = taskId;
+				formTitle.textContent = "Aufgabe bearbeiten";
+				document.getElementById("taskTitle").value = task.title;
+				document.getElementById("taskDesc").value = task.description || '';
+				document.getElementById("taskDue").value = task.dueDate || '';
+				taskForm.hidden = false;
+				addTaskBtn.hidden = true;
+			} catch (error) {
+				console.error("Fehler beim Laden der Aufgabe:", error);
+				alert("Fehler beim Laden der Aufgabe");
+			}
+		};
+
+		// Aufgabe löschen
+		window.deleteTask = async (taskId) => {
+			if (!confirm("Möchtest du diese Aufgabe wirklich löschen?")) return;
+			
+			try {
+				await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, taskId);
+				loadTasks();
+			} catch (error) {
+				console.error("Fehler beim Löschen:", error);
+				alert("Fehler beim Löschen der Aufgabe");
+			}
+		};
+
+		// Neue Aufgabe Button
+		addTaskBtn.addEventListener("click", () => {
+			editingTaskId = null;
+			formTitle.textContent = "Neue Aufgabe";
+			taskForm.reset();
+			taskForm.hidden = false;
+			addTaskBtn.hidden = true;
+		});
+
+		// Abbrechen Button
+		cancelBtn.addEventListener("click", () => {
+			taskForm.hidden = true;
+			addTaskBtn.hidden = false;
+			taskForm.reset();
+			editingTaskId = null;
+		});
+
+		// Formular absenden
+		taskForm.addEventListener("submit", async (e) => {
+			e.preventDefault();
+			
+			const title = document.getElementById("taskTitle").value.trim();
+			const description = document.getElementById("taskDesc").value.trim();
+			const dueDate = document.getElementById("taskDue").value;
+
+			if (!title) {
+				alert("Bitte gib einen Titel ein");
+				return;
+			}
+
+			const taskData = {
+				title,
+				description,
+				dueDate: dueDate || null,
+				completed: false,
+				userId: currentUser.$id
+			};
+
+			try {
+				if (editingTaskId) {
+					// Bearbeiten
+					await databases.updateDocument(DATABASE_ID, COLLECTION_ID, editingTaskId, taskData);
+				} else {
+					// Neu erstellen
+					await databases.createDocument(
+						DATABASE_ID, 
+						COLLECTION_ID, 
+						'unique()', 
+						taskData
+					);
+				}
+				
+				taskForm.hidden = true;
+				addTaskBtn.hidden = false;
+				taskForm.reset();
+				editingTaskId = null;
+				loadTasks();
+			} catch (error) {
+				console.error("Fehler beim Speichern:", error);
+				alert("Fehler beim Speichern: " + (error.message || "Unbekannter Fehler"));
+			}
+		});
+
+		// Logout
 		logoutBtn.addEventListener("click", async () => {
 			try {
 				await account.deleteSession("current");
@@ -59,6 +264,7 @@
 			}
 		});
 
+		// Start
 		loadUser();
 	</script>
 </body>
