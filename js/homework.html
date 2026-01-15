@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8" />
+	<title>HomeworkHub - Aufgaben</title>
+	<link rel="stylesheet" href="../style.css" />
+	<script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.1"></script>
+</head>
+<body>
+	<main class="page">
+		<section class="card auth-card">
+			<header class="auth-header">
+				<p class="eyebrow">HomeworkHub</p>
+				<h1 class="title">Hausaufgaben Uebersicht</h1>
+				<p class="subtitle">Eingeloggt als <span id="userEmail">...</span>.</p>
+			</header>
+
+			<div class="actions">
+				<button id="logout" class="secondary">Logout</button>
+			</div>
+
+			<div class="hint">
+				<p>Hier koennen Aufgaben, To-Dos oder Notizen fuer den Schulalltag stehen.</p>
+			</div>
+		</section>
+	</main>
+
+	<script>
+		const APPWRITE_ENDPOINT = "https://appwrite.chjk.xyz/v1";
+		const APPWRITE_PROJECT_ID = "6968a0ae003339fc702b";
+
+		const client = new Appwrite.Client()
+			.setEndpoint(APPWRITE_ENDPOINT)
+			.setProject(APPWRITE_PROJECT_ID);
+
+		const account = new Appwrite.Account(client);
+
+		const logoutBtn = document.getElementById("logout");
+		const userEmailEl = document.getElementById("userEmail");
+
+		const redirectToLogin = () => {
+			window.location.replace("../index.html");
+		};
+
+		const loadUser = async () => {
+			try {
+				const user = await account.get();
+				userEmailEl.textContent = user.email || user.name || "Unbekannt";
+			} catch (error) {
+				redirectToLogin();
+			}
+		};
+
+		logoutBtn.addEventListener("click", async () => {
+			try {
+				await account.deleteSession("current");
+			} finally {
+				redirectToLogin();
+			}
+		});
+
+		loadUser();
+	</script>
+</body>
+</html>

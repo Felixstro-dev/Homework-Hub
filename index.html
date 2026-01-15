@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>HomeworkHub - Login</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.1"></script>
+</head>
+<body>
+  <main class="page">
+    <section class="card auth-card">
+      <header class="auth-header">
+        <p class="eyebrow">HomeworkHub</p>
+        <h1 class="title">Einloggen oder Account anlegen</h1>
+        <p class="subtitle">Verwalte deine Hausaufgaben zentral und bleibe organisiert.</p>
+      </header>
+
+      <div class="tabs">
+        <button class="tab active" id="tabLogin">Login</button>
+        <button class="tab" id="tabRegister">Account erstellen</button>
+      </div>
+
+      <form id="loginForm" class="form visible">
+        <label class="field">
+          <span>Email</span>
+          <input id="email" type="email" placeholder="name@example.com" required />
+        </label>
+        <label class="field">
+          <span>Passwort</span>
+          <input id="password" type="password" placeholder="********" required />
+        </label>
+        <button class="primary" type="submit">Login</button>
+      </form>
+
+      <form id="registerForm" class="form" hidden>
+        <label class="field">
+          <span>Email</span>
+          <input id="regEmail" type="email" placeholder="name@example.com" required />
+        </label>
+        <label class="field">
+          <span>Passwort</span>
+          <input id="regPassword" type="password" placeholder="Mindestens 8 Zeichen" minlength="8" required />
+        </label>
+        <button class="primary" type="submit">Account erstellen</button>
+      </form>
+
+      <p id="msg" class="message" role="status"></p>
+    </section>
+  </main>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
