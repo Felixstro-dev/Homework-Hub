@@ -95,7 +95,7 @@
 					DATABASE_ID,
 					COLLECTION_ID,
 					[
-						Appwrite.Query.equal('userID', currentUser.$id),
+						Appwrite.Query.equal('userId', currentUser.$id),
 						Appwrite.Query.orderDesc('$createdAt')
 					]
 				);
@@ -224,18 +224,23 @@
 
 			const taskData = {
 				Title: title,
-				description,
+				description: description || null,
 				dueDay: dueDate || null,
-				completed: false,
-				userID: currentUser.$id
+				completed: editingTaskId ? undefined : false,
+				userId: currentUser.$id
 			};
 
 			console.log("Speichere Aufgabe:", taskData);
 
 			try {
 				if (editingTaskId) {
-					// Bearbeiten
-					await databases.updateDocument(DATABASE_ID, COLLECTION_ID, editingTaskId, taskData);
+					// Bearbeiten - nur die geänderten Felder
+					const updateData = {
+						Title: title,
+						description: description || null,
+						dueDay: dueDate || null
+					};
+					await databases.updateDocument(DATABASE_ID, COLLECTION_ID, editingTaskId, updateData);
 				} else {
 					// Neu erstellen
 					await databases.createDocument(
