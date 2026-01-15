@@ -95,7 +95,7 @@
 					DATABASE_ID,
 					COLLECTION_ID,
 					[
-						Appwrite.Query.equal('userId', currentUser.$id),
+						Appwrite.Query.equal('userID', currentUser.$id),
 						Appwrite.Query.orderDesc('$createdAt')
 					]
 				);
@@ -124,9 +124,9 @@
 						/>
 					</div>
 					<div class="task-content">
-						<h4 class="task-title">${escapeHtml(task.title)}</h4>
+						<h4 class="task-title">${escapeHtml(task.Title)}</h4>
 						${task.description ? `<p class="task-desc">${escapeHtml(task.description)}</p>` : ''}
-						${task.dueDate ? `<span class="task-due">Fällig: ${formatDate(task.dueDate)}</span>` : ''}
+						${task.dueDay ? `<span class="task-due">Fällig: ${formatDate(task.dueDay)}</span>` : ''}
 					</div>
 					<div class="task-actions">
 						<button class="icon-btn" onclick="editTask('${task.$id}')" title="Bearbeiten">✏️</button>
@@ -168,9 +168,9 @@
 				const task = await databases.getDocument(DATABASE_ID, COLLECTION_ID, taskId);
 				editingTaskId = taskId;
 				formTitle.textContent = "Aufgabe bearbeiten";
-				document.getElementById("taskTitle").value = task.title;
+				document.getElementById("taskTitle").value = task.Title;
 				document.getElementById("taskDesc").value = task.description || '';
-				document.getElementById("taskDue").value = task.dueDate || '';
+				document.getElementById("taskDue").value = task.dueDay || '';
 				taskForm.hidden = false;
 				addTaskBtn.hidden = true;
 			} catch (error) {
@@ -223,12 +223,14 @@
 			}
 
 			const taskData = {
-				title,
+				Title: title,
 				description,
-				dueDate: dueDate || null,
+				dueDay: dueDate || null,
 				completed: false,
-				userId: currentUser.$id
+				userID: currentUser.$id
 			};
+
+			console.log("Speichere Aufgabe:", taskData);
 
 			try {
 				if (editingTaskId) {
